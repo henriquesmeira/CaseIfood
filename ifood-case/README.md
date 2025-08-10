@@ -31,9 +31,9 @@ ifood-case/
 │   ├── data_extraction.py            # Extração Python
 │   ├── data_consolidation.py         # Consolidação PySpark
 │   └── main_pipeline_v2.py           # Orquestrador V2
-├── sql/                              # Consultas SQL
+├── analysis/                        # Notebooks V2
+    ├── sql/                              # Consultas SQL
 │   └── business_questions.sql        # Respostas finais
-├── notebooks/                        # Notebooks V2
 │   ├── 01_Data_Extraction_Python.py
 │   ├── 02_Data_Consolidation_PySpark.py
 │   └── 03_Business_Analysis_SQL.py
