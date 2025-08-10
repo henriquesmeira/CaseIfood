@@ -1,24 +1,24 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Case Técnico iFood - Data Architect
-# MAGIC ## Notebook 1: Extração de Dados (Python)
+# MAGIC # iFood Case - Data Architect
+# MAGIC ## Notebook 1: Data Extraction (Python)
 # MAGIC 
-# MAGIC Este notebook implementa a **primeira etapa** da nova arquitetura:
+# MAGIC This notebook implements the first stage of the data pipeline:
 # MAGIC 
-# MAGIC ### 🏗️ Arquitetura V2:
-# MAGIC 1. **Python**: Extração dos dados (este notebook)
-# MAGIC 2. **PySpark**: Consolidação no Delta Lake (próximo notebook)
-# MAGIC 3. **SQL**: Respostas finais do desafio (último notebook)
+# MAGIC ### Architecture:
+# MAGIC 1. **Python**: Data extraction (this notebook)
+# MAGIC 2. **PySpark**: Data consolidation (next notebook)
+# MAGIC 3. **SQL**: Business analysis (final notebook)
 # MAGIC 
-# MAGIC ### 📥 Responsabilidades deste Notebook:
-# MAGIC - Download dos arquivos Parquet via Python
-# MAGIC - Upload para DBFS (Databricks File System)
-# MAGIC - Validação dos arquivos baixados
+# MAGIC ### Responsibilities:
+# MAGIC - Download Parquet files via Python
+# MAGIC - Upload to DBFS (Databricks File System)
+# MAGIC - Validate downloaded files
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 1. Configuração e Imports
+# MAGIC ## 1. Configuration and Imports
 
 # COMMAND ----------
 
@@ -27,11 +27,11 @@ import os
 import time
 from typing import Dict, List, Tuple
 
-# Configurações
+# Configuration
 LOCAL_DATA_DIR = "/tmp/nyc_taxi_data"
-DBFS_RAW_DIR = "/tmp/nyc_taxi/raw"  # Usando /tmp que é permitido
+DBFS_RAW_DIR = "/tmp/nyc_taxi/raw"
 
-# URLs dos dados NYC Taxi (Janeiro a Maio 2023)
+# NYC Taxi data URLs (January to May 2023)
 DATA_SOURCES = {
     "yellow": {
         "2023-01": "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet",
@@ -49,50 +49,47 @@ DATA_SOURCES = {
     }
 }
 
-print("🚀 EXTRAÇÃO DE DADOS NYC TAXI - PYTHON")
-print("="*50)
-print(f"📊 Total de arquivos: {sum(len(months) for months in DATA_SOURCES.values())}")
-print(f"📁 Diretório local: {LOCAL_DATA_DIR}")
-print(f"📁 Diretório DBFS: {DBFS_RAW_DIR}")
-print(f"💡 Usando /tmp no DBFS (compatível com Community Edition)")
+print("NYC Taxi Data Extraction - Python")
+print("=" * 40)
+print(f"Total files: {sum(len(months) for months in DATA_SOURCES.values())}")
+print(f"Local directory: {LOCAL_DATA_DIR}")
+print(f"DBFS directory: {DBFS_RAW_DIR}")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2. Funções de Download
+# MAGIC ## 2. Download Functions
 
 # COMMAND ----------
 
 def download_file_python(url: str, local_path: str, max_retries: int = 3) -> bool:
     """
-    Download de arquivo via Python requests
+    Download file via Python requests
     """
     for attempt in range(max_retries):
         try:
             filename = os.path.basename(local_path)
-            print(f"  📥 Download tentativa {attempt + 1}: {filename}")
+            print(f"  Download attempt {attempt + 1}: {filename}")
             
-            # Headers para simular browser
+            # Headers to simulate browser
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
+                'Connection': 'keep-alive'
             }
             
-            # Download com streaming e timeout
+            # Download with streaming and timeout
             response = requests.get(
                 url, 
                 headers=headers, 
                 stream=True, 
-                timeout=600,  # 10 minutos
+                timeout=600,
                 verify=True
             )
             response.raise_for_status()
             
-            # Salva arquivo em chunks
+            # Save file in chunks
             total_size = int(response.headers.get('content-length', 0))
             downloaded_size = 0
             
@@ -102,23 +99,23 @@ def download_file_python(url: str, local_path: str, max_retries: int = 3) -> boo
                         f.write(chunk)
                         downloaded_size += len(chunk)
                         
-                        # Progress a cada 50MB
+                        # Progress every 50MB
                         if total_size > 0 and downloaded_size % (50 * 1024 * 1024) == 0:
                             progress = (downloaded_size / total_size * 100)
-                            print(f"    📊 Progresso: {progress:.1f}%")
+                            print(f"    Progress: {progress:.1f}%")
             
-            # Verifica tamanho final
+            # Verify final size
             file_size = os.path.getsize(local_path)
             if file_size == 0:
-                raise ValueError("Arquivo baixado está vazio")
+                raise ValueError("Downloaded file is empty")
             
-            print(f"    ✅ Download concluído: {file_size / (1024*1024):.1f} MB")
+            print(f"    Download completed: {file_size / (1024*1024):.1f} MB")
             return True
             
         except Exception as e:
-            print(f"    ❌ Erro: {str(e)[:150]}...")
+            print(f"    Error: {str(e)[:150]}...")
             
-            # Remove arquivo parcial
+            # Remove partial file
             try:
                 if os.path.exists(local_path):
                     os.remove(local_path)
@@ -126,130 +123,109 @@ def download_file_python(url: str, local_path: str, max_retries: int = 3) -> boo
                 pass
             
             if attempt < max_retries - 1:
-                delay = 10 * (2 ** attempt)  # Backoff exponencial
-                print(f"    ⏳ Aguardando {delay} segundos...")
+                delay = 10 * (2 ** attempt)
+                print(f"    Waiting {delay} seconds...")
                 time.sleep(delay)
             else:
-                print(f"    💥 Falha definitiva após {max_retries} tentativas")
+                print(f"    Final failure after {max_retries} attempts")
                 return False
 
 def upload_to_dbfs(local_path: str, dbfs_path: str) -> bool:
     """
-    Upload do arquivo local para DBFS (com fallback para local)
+    Upload local file to DBFS (with fallback to local storage)
     """
     try:
         filename = os.path.basename(local_path)
-        print(f"  📤 Upload para DBFS: {filename}")
-
-        # Verifica se arquivo local existe
+        print(f"  Upload to DBFS: {filename}")
+        
+        # Verify local file exists
         if not os.path.exists(local_path):
-            raise FileNotFoundError(f"Arquivo local não encontrado: {local_path}")
-
-        # Cria diretório DBFS se não existir
+            raise FileNotFoundError(f"Local file not found: {local_path}")
+        
+        # Create DBFS directory if it doesn't exist
         try:
             dbutils.fs.mkdirs(os.path.dirname(dbfs_path))
         except Exception as mkdir_error:
-            print(f"    ⚠️  Erro ao criar diretório DBFS: {mkdir_error}")
+            print(f"    Warning: DBFS directory creation failed: {mkdir_error}")
             if "Public DBFS root is disabled" in str(mkdir_error):
-                print(f"    💡 DBFS público desabilitado - mantendo arquivo local")
-                return True  # Considera sucesso, mas mantém local
+                print(f"    DBFS public access disabled - keeping file local")
+                return True
             raise mkdir_error
-
-        # Remove arquivo DBFS se existir
+        
+        # Remove existing DBFS file
         try:
             dbutils.fs.rm(dbfs_path)
         except:
-            pass  # Arquivo pode não existir
-
-        # Copia arquivo
+            pass
+        
+        # Copy file
         dbutils.fs.cp(f"file:{local_path}", dbfs_path)
-
-        # Verifica se upload foi bem-sucedido
+        
+        # Verify upload success
         file_info = dbutils.fs.ls(dbfs_path)
         if file_info:
             dbfs_size = file_info[0].size
             local_size = os.path.getsize(local_path)
-
+            
             if dbfs_size != local_size:
-                raise ValueError(f"Tamanhos diferentes: local={local_size}, dbfs={dbfs_size}")
-
-            print(f"    ✅ Upload concluído: {dbfs_size / (1024*1024):.1f} MB")
+                raise ValueError(f"Size mismatch: local={local_size}, dbfs={dbfs_size}")
+            
+            print(f"    Upload completed: {dbfs_size / (1024*1024):.1f} MB")
             return True
         else:
-            raise ValueError("Arquivo não encontrado no DBFS após upload")
-
+            raise ValueError("File not found in DBFS after upload")
+        
     except Exception as e:
-        print(f"    ❌ Erro no upload: {e}")
+        print(f"    Upload error: {e}")
         if "Public DBFS root is disabled" in str(e):
-            print(f"    💡 Mantendo arquivo local: {local_path}")
-            return True  # Considera sucesso para continuar processamento
+            print(f"    Keeping file local: {local_path}")
+            return True
         return False
 
-print("✅ Funções de download definidas!")
+print("Download functions defined")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 💡 Troubleshooting DBFS
-# MAGIC
-# MAGIC **Se você receber erro "Public DBFS root is disabled":**
-# MAGIC
-# MAGIC 1. **Problema**: Databricks Community Edition desabilitou `/FileStore/`
-# MAGIC 2. **Solução**: Usamos `/tmp/` que é permitido
-# MAGIC 3. **Alternativa**: Use apenas armazenamento local se DBFS falhar completamente
+# MAGIC ## 3. Environment Setup
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## 3. Preparação do Ambiente
-
-# COMMAND ----------
-
-# Cria diretório local
+# Create local directory
 os.makedirs(LOCAL_DATA_DIR, exist_ok=True)
-print(f"📁 Diretório local criado: {LOCAL_DATA_DIR}")
+print(f"Local directory created: {LOCAL_DATA_DIR}")
 
-# Limpa diretório DBFS se existir
+# Clean DBFS directory if exists
 try:
     dbutils.fs.rm(DBFS_RAW_DIR, True)
-    print(f"🗑️  Diretório DBFS limpo: {DBFS_RAW_DIR}")
+    print(f"DBFS directory cleaned: {DBFS_RAW_DIR}")
 except:
-    print(f"📁 Diretório DBFS será criado: {DBFS_RAW_DIR}")
+    print(f"DBFS directory will be created: {DBFS_RAW_DIR}")
 
-# Cria diretório DBFS (usando /tmp que é permitido)
+# Create DBFS directory
 try:
     dbutils.fs.mkdirs(DBFS_RAW_DIR)
-    print(f"✅ Diretório DBFS criado: {DBFS_RAW_DIR}")
+    print(f"DBFS directory created: {DBFS_RAW_DIR}")
 except Exception as e:
-    print(f"⚠️  Erro ao criar diretório DBFS: {e}")
-    print(f"💡 Tentando diretório alternativo...")
-
-    # Fallback para diretório do usuário
-    alternative_dir = f"/tmp/nyc_taxi_raw_{spark.sparkContext.sparkUser()}"
-    try:
-        dbutils.fs.mkdirs(alternative_dir)
-        DBFS_RAW_DIR = alternative_dir
-        print(f"✅ Diretório alternativo criado: {DBFS_RAW_DIR}")
-    except Exception as e2:
-        print(f"❌ Falha total: {e2}")
-        print(f"💡 Use dados locais apenas ou configure workspace com DBFS habilitado")
+    print(f"Warning: Error creating DBFS directory: {e}")
+    print("Note: Using /tmp directory which is allowed in Community Edition")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 4. Extração Principal
+# MAGIC ## 4. Main Extraction
 
 # COMMAND ----------
 
-# Contadores
+# Counters
 downloaded_files = []
 failed_downloads = []
 
-print("🚀 INICIANDO EXTRAÇÃO DOS DADOS")
-print("="*40)
+print("Starting data extraction")
+print("=" * 30)
 
 for taxi_type, months in DATA_SOURCES.items():
-    print(f"\n🚕 Processando {taxi_type}:")
+    print(f"\nProcessing {taxi_type}:")
     
     for year_month, url in months.items():
         filename = f"{taxi_type}_tripdata_{year_month}.parquet"
@@ -258,21 +234,21 @@ for taxi_type, months in DATA_SOURCES.items():
         
         # Download
         if download_file_python(url, local_path):
-            # Upload para DBFS (ou mantém local se DBFS falhar)
+            # Upload to DBFS (or keep local if DBFS fails)
             upload_success = upload_to_dbfs(local_path, dbfs_path)
-
+            
             if upload_success:
-                # Verifica se arquivo realmente existe no DBFS
+                # Check if file actually exists in DBFS
                 try:
                     dbutils.fs.ls(dbfs_path)
                     actual_dbfs_path = dbfs_path
                     can_remove_local = True
                 except:
-                    # DBFS falhou, usa arquivo local
+                    # DBFS failed, use local file
                     actual_dbfs_path = f"file:{local_path}"
                     can_remove_local = False
-                    print(f"    💡 Usando arquivo local: {local_path}")
-
+                    print(f"    Using local file: {local_path}")
+                
                 downloaded_files.append({
                     'taxi_type': taxi_type,
                     'year_month': year_month,
@@ -282,81 +258,82 @@ for taxi_type, months in DATA_SOURCES.items():
                     'url': url,
                     'is_local_only': not can_remove_local
                 })
-
-                # Remove arquivo local apenas se upload DBFS foi bem-sucedido
+                
+                # Remove local file only if DBFS upload was successful
                 if can_remove_local:
                     try:
                         os.remove(local_path)
-                        print(f"    🗑️  Arquivo local removido")
+                        print(f"    Local file removed")
                     except:
                         pass
                 else:
-                    print(f"    📁 Arquivo mantido localmente")
+                    print(f"    File kept locally")
             else:
                 failed_downloads.append({
                     'filename': filename,
-                    'reason': 'Upload para DBFS falhou'
+                    'reason': 'DBFS upload failed'
                 })
         else:
             failed_downloads.append({
                 'filename': filename,
-                'reason': 'Download falhou'
+                'reason': 'Download failed'
             })
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 5. Relatório de Extração
+# MAGIC ## 5. Extraction Report
 
 # COMMAND ----------
 
-print("📊 RELATÓRIO DE EXTRAÇÃO")
-print("="*40)
-print(f"   • Sucessos: {len(downloaded_files)}")
-print(f"   • Falhas: {len(failed_downloads)}")
+print("Extraction Report")
+print("=" * 30)
+print(f"   Successful: {len(downloaded_files)}")
+print(f"   Failed: {len(failed_downloads)}")
 
 total_files = len(downloaded_files) + len(failed_downloads)
 if total_files > 0:
     success_rate = (len(downloaded_files) / total_files) * 100
-    print(f"   • Taxa de sucesso: {success_rate:.1f}%")
+    print(f"   Success rate: {success_rate:.1f}%")
 
 if downloaded_files:
-    print(f"\n✅ Arquivos extraídos com sucesso:")
+    print(f"\nSuccessful extractions:")
     for file_info in downloaded_files:
-        print(f"   • {file_info['filename']} → {file_info['dbfs_path']}")
+        location = "local" if file_info.get('is_local_only', False) else "DBFS"
+        print(f"   {file_info['filename']} -> {location}")
 
 if failed_downloads:
-    print(f"\n❌ Arquivos com falha:")
+    print(f"\nFailed extractions:")
     for file_info in failed_downloads:
-        print(f"   • {file_info['filename']}: {file_info['reason']}")
+        print(f"   {file_info['filename']}: {file_info['reason']}")
 
-print(f"\n📁 Arquivos disponíveis no DBFS: {DBFS_RAW_DIR}")
+print(f"\nFiles available in: {DBFS_RAW_DIR}")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 6. Validação dos Arquivos
+# MAGIC ## 6. File Validation
 
 # COMMAND ----------
 
-print("🔍 VALIDAÇÃO DOS ARQUIVOS EXTRAÍDOS")
-print("="*40)
+print("Validating extracted files")
+print("=" * 30)
 
 try:
-    # Lista arquivos no DBFS
+    # List files in DBFS
     dbfs_files = dbutils.fs.ls(DBFS_RAW_DIR)
     
-    print(f"📂 Arquivos encontrados no DBFS ({len(dbfs_files)}):")
+    print(f"Files found in DBFS ({len(dbfs_files)}):")
     total_size = 0
     
     for file_info in dbfs_files:
         file_size_mb = file_info.size / (1024 * 1024)
         total_size += file_size_mb
-        print(f"   • {file_info.name}: {file_size_mb:.1f} MB")
+        print(f"   {file_info.name}: {file_size_mb:.1f} MB")
     
-    print(f"\n📊 Tamanho total: {total_size:.1f} MB")
+    print(f"\nTotal size: {total_size:.1f} MB")
     
-    # Verifica se todos os arquivos esperados estão presentes
+    # Check if all expected files are present
     expected_files = []
     for taxi_type, months in DATA_SOURCES.items():
         for year_month in months.keys():
@@ -366,28 +343,28 @@ try:
     missing_files = [f for f in expected_files if f not in present_files]
     
     if missing_files:
-        print(f"\n⚠️  Arquivos ausentes ({len(missing_files)}):")
+        print(f"\nMissing files ({len(missing_files)}):")
         for filename in missing_files:
-            print(f"   • {filename}")
+            print(f"   {filename}")
     else:
-        print(f"\n✅ Todos os arquivos esperados estão presentes!")
+        print(f"\nAll expected files are present")
     
 except Exception as e:
-    print(f"❌ Erro na validação: {e}")
+    print(f"Validation error: {e}")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 7. Preparação para Próxima Etapa
+# MAGIC ## 7. Preparation for Next Stage
 
 # COMMAND ----------
 
-# Salva informações dos arquivos para próximo notebook
+# Save file information for next notebook
 if downloaded_files:
-    print("📋 PREPARANDO PARA CONSOLIDAÇÃO PYSPARK")
-    print("="*40)
+    print("Preparing for PySpark consolidation")
+    print("=" * 30)
     
-    # Cria lista de arquivos para o próximo notebook
+    # Create list of files for consolidation
     files_for_consolidation = []
     
     for file_info in downloaded_files:
@@ -398,97 +375,93 @@ if downloaded_files:
             'filename': file_info['filename']
         })
     
-    print(f"✅ {len(files_for_consolidation)} arquivos prontos para consolidação")
-    print(f"📁 Localização: {DBFS_RAW_DIR}")
+    print(f"{len(files_for_consolidation)} files ready for consolidation")
+    print(f"Location: {DBFS_RAW_DIR}")
     
-    # Mostra exemplo de como acessar no próximo notebook
-    print(f"\n💡 Para usar no próximo notebook:")
-
-    # Verifica se há arquivos locais vs DBFS
+    # Show example usage for next notebook
+    print(f"\nFor use in next notebook:")
+    
+    # Check if there are local vs DBFS files
     local_files = [f for f in files_for_consolidation if f.get('is_local_only', False)]
     dbfs_files = [f for f in files_for_consolidation if not f.get('is_local_only', False)]
-
+    
     if dbfs_files:
-        print(f"```python")
-        print(f"# Listar arquivos no DBFS")
+        print(f"# List DBFS files")
         print(f"dbutils.fs.ls('{DBFS_RAW_DIR}')")
         print(f"")
-        print(f"# Ler arquivo do DBFS")
+        print(f"# Read DBFS file")
         print(f"df = spark.read.parquet('{DBFS_RAW_DIR}/yellow_tripdata_2023-01.parquet')")
-        print(f"```")
-
+    
     if local_files:
-        print(f"\n⚠️  Alguns arquivos estão apenas localmente:")
-        print(f"```python")
-        print(f"# Ler arquivo local")
+        print(f"\nSome files are local only:")
+        print(f"# Read local file")
         print(f"df = spark.read.parquet('file:/tmp/nyc_taxi_data/yellow_tripdata_2023-01.parquet')")
-        print(f"```")
     
 else:
-    print("❌ Nenhum arquivo foi extraído com sucesso!")
-    print("💡 Verifique a conectividade e tente novamente")
+    print("No files were extracted successfully")
+    print("Check connectivity and try again")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 8. Limpeza e Finalização
+# MAGIC ## 8. Cleanup and Finalization
 
 # COMMAND ----------
 
-# Limpa diretório local temporário
+# Clean temporary local directory
 try:
     import shutil
     if os.path.exists(LOCAL_DATA_DIR):
         shutil.rmtree(LOCAL_DATA_DIR)
-        print(f"🗑️  Diretório local removido: {LOCAL_DATA_DIR}")
+        print(f"Local directory removed: {LOCAL_DATA_DIR}")
 except Exception as e:
-    print(f"⚠️  Erro ao limpar diretório local: {e}")
+    print(f"Warning: Error cleaning local directory: {e}")
 
-print(f"\n🎉 EXTRAÇÃO CONCLUÍDA!")
-print("="*30)
-print(f"✅ Arquivos extraídos: {len(downloaded_files)}")
-print(f"❌ Arquivos com falha: {len(failed_downloads)}")
+print(f"\nExtraction completed")
+print("=" * 20)
+print(f"Files extracted: {len(downloaded_files)}")
+print(f"Files failed: {len(failed_downloads)}")
 
-# Mostra onde os dados estão
+# Show data location
 local_only = sum(1 for f in downloaded_files if f.get('is_local_only', False))
 dbfs_files = len(downloaded_files) - local_only
 
 if dbfs_files > 0:
-    print(f"📁 Arquivos no DBFS: {dbfs_files} em {DBFS_RAW_DIR}")
+    print(f"DBFS files: {dbfs_files} in {DBFS_RAW_DIR}")
 if local_only > 0:
-    print(f"📁 Arquivos locais: {local_only} em {LOCAL_DATA_DIR}")
+    print(f"Local files: {local_only} in {LOCAL_DATA_DIR}")
 
-print(f"\n🚀 Próximo passo: Execute o notebook de Consolidação PySpark")
-print(f"💡 O próximo notebook detectará automaticamente a localização dos arquivos")
+print(f"\nNext step: Execute PySpark consolidation notebook")
+print(f"Note: Next notebook will automatically detect file locations")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Resumo da Extração
+# MAGIC ## Summary
 # MAGIC 
-# MAGIC ### ✅ Etapa 1 Concluída: Extração Python
+# MAGIC ### Stage 1 Completed: Python Extraction
 # MAGIC 
-# MAGIC **O que foi feito:**
-# MAGIC - ✅ Download de arquivos Parquet via Python requests
-# MAGIC - ✅ Upload para DBFS (Databricks File System)
-# MAGIC - ✅ Validação dos arquivos extraídos
-# MAGIC - ✅ Preparação para próxima etapa
+# MAGIC **What was done:**
+# MAGIC - Downloaded Parquet files via Python requests
+# MAGIC - Uploaded to DBFS (Databricks File System)
+# MAGIC - Validated extracted files
+# MAGIC - Prepared for next stage
 # MAGIC 
-# MAGIC **Arquivos processados:**
-# MAGIC - Yellow Taxis: Janeiro a Maio 2023
-# MAGIC - Green Taxis: Janeiro a Maio 2023
-# MAGIC - Total: 10 arquivos Parquet
+# MAGIC **Files processed:**
+# MAGIC - Yellow Taxis: January to May 2023
+# MAGIC - Green Taxis: January to May 2023
+# MAGIC - Total: 10 Parquet files
 # MAGIC 
-# MAGIC **Localização dos dados:**
-# MAGIC - DBFS: `/FileStore/nyc_taxi/raw/`
-# MAGIC - Formato: Parquet (dados brutos)
+# MAGIC **Data location:**
+# MAGIC - DBFS: `/tmp/nyc_taxi/raw/`
+# MAGIC - Format: Parquet (raw data)
 # MAGIC 
-# MAGIC ### 🚀 Próximos Passos:
-# MAGIC 1. **Notebook 2**: Consolidação PySpark (Raw → Bronze → Silver → Gold)
-# MAGIC 2. **Notebook 3**: Análises SQL (Respostas às perguntas do case)
+# MAGIC ### Next Steps:
+# MAGIC 1. **Notebook 2**: PySpark Consolidation (Raw → Bronze → Silver → Gold)
+# MAGIC 2. **Notebook 3**: SQL Analysis (Business questions answers)
 # MAGIC 
-# MAGIC ### 🏗️ Arquitetura Implementada:
+# MAGIC ### Architecture Implemented:
 # MAGIC ```
 # MAGIC [Python Download] → [DBFS Storage] → [PySpark Processing] → [SQL Analysis]
-# MAGIC      ✅ FEITO           ✅ FEITO         🔄 PRÓXIMO         📊 FINAL
+# MAGIC      COMPLETED           COMPLETED         NEXT              FINAL
 # MAGIC ```

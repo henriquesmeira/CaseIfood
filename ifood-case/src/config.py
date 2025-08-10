@@ -1,18 +1,18 @@
 """
-Configurações centralizadas para o projeto iFood Case - Data Architect
+Central configuration for iFood Case - Data Architect
 """
 
 from typing import Dict, List
 
-# Configurações do Data Lake
+# Data Lake configuration
 CATALOG_NAME = "main"
 SCHEMA_NAME = "nyc_taxi"
 
-# Camadas do Data Lake
-RAW_TABLE = "raw_trips"           # Camada Raw (dados brutos)
-BRONZE_TABLE = "bronze_trips"     # Camada Bronze (padronizada)
-SILVER_TABLE = "silver_trips"     # Camada Silver (limpa e enriquecida)
-GOLD_TABLE = "gold_trips"         # Camada Gold (agregada para análises)
+# Data Lake layers
+RAW_TABLE = "raw_trips"
+BRONZE_TABLE = "bronze_trips"
+SILVER_TABLE = "silver_trips"
+GOLD_TABLE = "gold_trips"
 
 # Configurações de processamento
 SPARK_CONFIGS = {
@@ -24,7 +24,7 @@ SPARK_CONFIGS = {
     "spark.databricks.delta.autoCompact.enabled": "true"
 }
 
-# URLs dos dados de táxi NYC (Janeiro a Maio 2023)
+# NYC Taxi data URLs (January to May 2023)
 DATA_SOURCES = {
     "yellow": {
         "2023-01": "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet",
@@ -42,7 +42,7 @@ DATA_SOURCES = {
     }
 }
 
-# Colunas obrigatórias conforme especificação do case
+# Required columns as per case specification
 REQUIRED_COLUMNS = [
     "VendorID",
     "passenger_count", 
@@ -86,13 +86,13 @@ OPTIMIZATION_CONFIG = {
     "z_order_columns": ["tpep_pickup_datetime", "taxi_type"]
 }
 
-# Configurações de diretórios
+# Directory configuration
 LOCAL_DATA_DIR = "/tmp/nyc_taxi_data"
-DBFS_RAW_DIR = "/tmp/nyc_taxi/raw"  # Usando /tmp que é permitido no Community Edition
+DBFS_RAW_DIR = "/tmp/nyc_taxi/raw"
 DBFS_PROCESSED_DIR = "/tmp/nyc_taxi/processed"
 
 def get_table_name(layer: str) -> str:
-    """Retorna o nome completo da tabela para uma camada específica"""
+    """Returns full table name for specified layer"""
     layer_tables = {
         "raw": RAW_TABLE,
         "bronze": BRONZE_TABLE,

@@ -1,6 +1,6 @@
 """
-Módulo para extração de dados NYC Taxi via Python
-Responsável por download e upload para DBFS
+Data extraction module for NYC Taxi data
+Handles download and upload to DBFS with robust error handling
 """
 
 import requests
@@ -8,68 +8,61 @@ import os
 import time
 from typing import Dict, List, Tuple, Optional
 
-from config import DATA_SOURCES, LOCAL_DATA_DIR, DBFS_RAW_DIR, RETRY_CONFIG
+from config import DATA_SOURCES, LOCAL_DATA_DIR, DBFS_RAW_DIR
 
 
 class NYCTaxiDataExtractor:
     """
-    Classe para extração de dados NYC Taxi via Python
+    Data extractor for NYC Taxi data via Python requests
     """
     
     def __init__(self):
-        """Inicializa o extrator"""
+        """Initialize the extractor"""
         self.downloaded_files = []
         self.failed_downloads = []
         self.local_dir = LOCAL_DATA_DIR
         self.dbfs_dir = DBFS_RAW_DIR
         
-        # Cria diretório local
+        # Create local directory
         os.makedirs(self.local_dir, exist_ok=True)
-        print(f"📁 Diretório local criado: {self.local_dir}")
+        print(f"Local directory created: {self.local_dir}")
     
     def download_file(self, url: str, local_path: str, max_retries: int = 3) -> bool:
         """
-        Download de arquivo via Python requests
+        Download file via Python requests with retry logic
         
         Args:
-            url: URL do arquivo
-            local_path: Caminho local para salvar
-            max_retries: Número máximo de tentativas
+            url: File URL
+            local_path: Local path to save file
+            max_retries: Maximum number of retry attempts
             
         Returns:
-            True se download foi bem-sucedido
+            True if download was successful
         """
         for attempt in range(max_retries):
             try:
                 filename = os.path.basename(local_path)
-                print(f"  📥 Download tentativa {attempt + 1}: {filename}")
+                print(f"  Downloading attempt {attempt + 1}: {filename}")
                 
-                # Headers para simular browser
+                # Headers to simulate browser
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1'
+                    'Connection': 'keep-alive'
                 }
                 
-                # Download com streaming e timeout
+                # Download with streaming and timeout
                 response = requests.get(
                     url, 
                     headers=headers, 
                     stream=True, 
-                    timeout=600,  # 10 minutos
+                    timeout=600,
                     verify=True
                 )
                 response.raise_for_status()
                 
-                # Verifica content-type
-                content_type = response.headers.get('content-type', '')
-                if 'application/octet-stream' not in content_type and 'application/x-parquet' not in content_type:
-                    print(f"    ⚠️  Content-type inesperado: {content_type}")
-                
-                # Salva arquivo em chunks
+                # Save file in chunks
                 total_size = int(response.headers.get('content-length', 0))
                 downloaded_size = 0
                 
@@ -79,23 +72,23 @@ class NYCTaxiDataExtractor:
                             f.write(chunk)
                             downloaded_size += len(chunk)
                             
-                            # Progress a cada 50MB
+                            # Progress every 50MB
                             if downloaded_size % (50 * 1024 * 1024) == 0:
                                 progress = (downloaded_size / total_size * 100) if total_size > 0 else 0
-                                print(f"    📊 Progresso: {progress:.1f}%")
+                                print(f"    Progress: {progress:.1f}%")
                 
-                # Verifica tamanho final
+                # Verify final size
                 file_size = os.path.getsize(local_path)
                 if file_size == 0:
-                    raise ValueError("Arquivo baixado está vazio")
+                    raise ValueError("Downloaded file is empty")
                 
-                print(f"    ✅ Download concluído: {file_size / (1024*1024):.1f} MB")
+                print(f"    Download completed: {file_size / (1024*1024):.1f} MB")
                 return True
                 
             except Exception as e:
-                print(f"    ❌ Erro: {str(e)[:150]}...")
+                print(f"    Error: {str(e)[:150]}...")
                 
-                # Remove arquivo parcial
+                # Remove partial file
                 try:
                     if os.path.exists(local_path):
                         os.remove(local_path)
@@ -103,88 +96,90 @@ class NYCTaxiDataExtractor:
                     pass
                 
                 if attempt < max_retries - 1:
-                    delay = RETRY_CONFIG["initial_delay"] * (RETRY_CONFIG["backoff_multiplier"] ** attempt)
-                    delay = min(delay, RETRY_CONFIG["max_delay"])
-                    print(f"    ⏳ Aguardando {delay} segundos...")
+                    delay = 10 * (2 ** attempt)
+                    print(f"    Waiting {delay} seconds...")
                     time.sleep(delay)
                 else:
-                    print(f"    💥 Falha definitiva após {max_retries} tentativas")
+                    print(f"    Final failure after {max_retries} attempts")
                     return False
     
     def upload_to_dbfs(self, local_path: str, dbfs_path: str) -> bool:
         """
-        Upload do arquivo local para DBFS
+        Upload local file to DBFS with fallback to local storage
         
         Args:
-            local_path: Caminho do arquivo local
-            dbfs_path: Caminho de destino no DBFS
+            local_path: Local file path
+            dbfs_path: DBFS destination path
             
         Returns:
-            True se upload foi bem-sucedido
+            True if upload was successful or fallback applied
         """
         try:
             filename = os.path.basename(local_path)
-            print(f"  📤 Upload para DBFS: {filename}")
+            print(f"  Uploading to DBFS: {filename}")
             
-            # Verifica se arquivo local existe
+            # Verify local file exists
             if not os.path.exists(local_path):
-                raise FileNotFoundError(f"Arquivo local não encontrado: {local_path}")
+                raise FileNotFoundError(f"Local file not found: {local_path}")
             
-            # Cria diretório DBFS se não existir
+            # Create DBFS directory if it doesn't exist
             try:
                 dbutils.fs.mkdirs(os.path.dirname(dbfs_path))
-            except:
-                pass  # Diretório pode já existir
+            except Exception as mkdir_error:
+                print(f"    Warning: DBFS directory creation failed: {mkdir_error}")
+                if "Public DBFS root is disabled" in str(mkdir_error):
+                    print(f"    DBFS public access disabled - keeping file local")
+                    return True
+                raise mkdir_error
             
-            # Remove arquivo DBFS se existir
+            # Remove existing DBFS file
             try:
                 dbutils.fs.rm(dbfs_path)
             except:
-                pass  # Arquivo pode não existir
+                pass
             
-            # Copia arquivo
+            # Copy file to DBFS
             dbutils.fs.cp(f"file:{local_path}", dbfs_path)
             
-            # Verifica se upload foi bem-sucedido
-            try:
-                file_info = dbutils.fs.ls(dbfs_path)
-                if file_info:
-                    dbfs_size = file_info[0].size
-                    local_size = os.path.getsize(local_path)
-                    
-                    if dbfs_size != local_size:
-                        raise ValueError(f"Tamanhos diferentes: local={local_size}, dbfs={dbfs_size}")
-                    
-                    print(f"    ✅ Upload concluído: {dbfs_size / (1024*1024):.1f} MB")
-                    return True
-                else:
-                    raise ValueError("Arquivo não encontrado no DBFS após upload")
-                    
-            except Exception as e:
-                raise ValueError(f"Verificação do upload falhou: {e}")
+            # Verify upload success
+            file_info = dbutils.fs.ls(dbfs_path)
+            if file_info:
+                dbfs_size = file_info[0].size
+                local_size = os.path.getsize(local_path)
+                
+                if dbfs_size != local_size:
+                    raise ValueError(f"Size mismatch: local={local_size}, dbfs={dbfs_size}")
+                
+                print(f"    Upload completed: {dbfs_size / (1024*1024):.1f} MB")
+                return True
+            else:
+                raise ValueError("File not found in DBFS after upload")
             
         except Exception as e:
-            print(f"    ❌ Erro no upload: {e}")
+            print(f"    Upload error: {e}")
+            if "Public DBFS root is disabled" in str(e):
+                print(f"    Keeping file local: {local_path}")
+                return True
             return False
     
     def extract_all_data(self) -> Dict:
         """
-        Extrai todos os dados definidos em DATA_SOURCES
+        Extract all data defined in DATA_SOURCES
         
         Returns:
-            Dicionário com resultados da extração
+            Dictionary with extraction results
         """
-        print("🚀 INICIANDO EXTRAÇÃO DE DADOS NYC TAXI")
-        print("="*60)
+        print("Starting NYC Taxi data extraction")
+        print("=" * 50)
         
         self.downloaded_files = []
         self.failed_downloads = []
         
         total_files = sum(len(months) for months in DATA_SOURCES.values())
-        print(f"📊 Total de arquivos para processar: {total_files}")
+        print(f"Total files to process: {total_files}")
         
         for taxi_type, months in DATA_SOURCES.items():
-            print(f"\n🚕 Processando {taxi_type}:")
+            print(f"\nProcessing {taxi_type}:")
             
             for year_month, url in months.items():
                 filename = f"{taxi_type}_tripdata_{year_month}.parquet"
@@ -193,35 +188,52 @@ class NYCTaxiDataExtractor:
                 
                 # Download
                 if self.download_file(url, local_path):
-                    # Upload para DBFS
-                    if self.upload_to_dbfs(local_path, dbfs_path):
+                    # Upload to DBFS (or keep local if DBFS fails)
+                    upload_success = self.upload_to_dbfs(local_path, dbfs_path)
+                    
+                    if upload_success:
+                        # Check if file actually exists in DBFS
+                        try:
+                            dbutils.fs.ls(dbfs_path)
+                            actual_dbfs_path = dbfs_path
+                            can_remove_local = True
+                        except:
+                            # DBFS failed, use local file
+                            actual_dbfs_path = f"file:{local_path}"
+                            can_remove_local = False
+                            print(f"    Using local file: {local_path}")
+                        
                         self.downloaded_files.append({
                             'taxi_type': taxi_type,
                             'year_month': year_month,
                             'filename': filename,
                             'local_path': local_path,
-                            'dbfs_path': dbfs_path,
-                            'url': url
+                            'dbfs_path': actual_dbfs_path,
+                            'url': url,
+                            'is_local_only': not can_remove_local
                         })
                         
-                        # Remove arquivo local para economizar espaço
-                        try:
-                            os.remove(local_path)
-                            print(f"    🗑️  Arquivo local removido")
-                        except:
-                            pass
+                        # Remove local file only if DBFS upload was successful
+                        if can_remove_local:
+                            try:
+                                os.remove(local_path)
+                                print(f"    Local file removed")
+                            except:
+                                pass
+                        else:
+                            print(f"    File kept locally")
                     else:
                         self.failed_downloads.append({
                             'filename': filename,
-                            'reason': 'Upload para DBFS falhou'
+                            'reason': 'DBFS upload failed'
                         })
                 else:
                     self.failed_downloads.append({
                         'filename': filename,
-                        'reason': 'Download falhou'
+                        'reason': 'Download failed'
                     })
         
-        # Relatório final
+        # Final report
         self.print_extraction_report()
         
         return {
@@ -233,57 +245,61 @@ class NYCTaxiDataExtractor:
         }
     
     def print_extraction_report(self):
-        """Imprime relatório da extração"""
-        print(f"\n📊 RELATÓRIO DE EXTRAÇÃO")
-        print("="*40)
-        print(f"   • Sucessos: {len(self.downloaded_files)}")
-        print(f"   • Falhas: {len(self.failed_downloads)}")
-        print(f"   • Taxa de sucesso: {len(self.downloaded_files)/(len(self.downloaded_files)+len(self.failed_downloads))*100:.1f}%")
+        """Print extraction report"""
+        print(f"\nExtraction Report")
+        print("=" * 30)
+        print(f"   Successful: {len(self.downloaded_files)}")
+        print(f"   Failed: {len(self.failed_downloads)}")
+        
+        if len(self.downloaded_files) + len(self.failed_downloads) > 0:
+            success_rate = len(self.downloaded_files) / (len(self.downloaded_files) + len(self.failed_downloads)) * 100
+            print(f"   Success rate: {success_rate:.1f}%")
         
         if self.downloaded_files:
-            print(f"\n✅ Arquivos extraídos com sucesso:")
+            print(f"\nSuccessful extractions:")
             for file_info in self.downloaded_files:
-                print(f"   • {file_info['filename']} → {file_info['dbfs_path']}")
+                location = "local" if file_info.get('is_local_only', False) else "DBFS"
+                print(f"   {file_info['filename']} -> {location}")
         
         if self.failed_downloads:
-            print(f"\n❌ Arquivos com falha:")
+            print(f"\nFailed extractions:")
             for file_info in self.failed_downloads:
-                print(f"   • {file_info['filename']}: {file_info['reason']}")
+                print(f"   {file_info['filename']}: {file_info['reason']}")
         
-        print(f"\n📁 Arquivos disponíveis no DBFS: {self.dbfs_dir}")
+        print(f"\nFiles available in: {self.dbfs_dir}")
     
     def list_extracted_files(self) -> List[Dict]:
         """
-        Lista arquivos extraídos com sucesso
+        List successfully extracted files
         
         Returns:
-            Lista de informações dos arquivos
+            List of file information dictionaries
         """
         return self.downloaded_files.copy()
     
     def cleanup_local_files(self):
-        """Remove arquivos locais temporários"""
+        """Remove temporary local files"""
         try:
             import shutil
             if os.path.exists(self.local_dir):
                 shutil.rmtree(self.local_dir)
-                print(f"🗑️  Diretório local removido: {self.local_dir}")
+                print(f"Local directory removed: {self.local_dir}")
         except Exception as e:
-            print(f"⚠️  Erro ao limpar arquivos locais: {e}")
+            print(f"Warning: Error cleaning local files: {e}")
 
 
 def main():
-    """Função principal para execução standalone"""
+    """Main function for standalone execution"""
     extractor = NYCTaxiDataExtractor()
     results = extractor.extract_all_data()
     
     if results['success_count'] > 0:
-        print(f"\n🎉 Extração concluída com sucesso!")
-        print(f"📊 {results['success_count']} de {results['total_files']} arquivos extraídos")
+        print(f"\nExtraction completed successfully!")
+        print(f"{results['success_count']} of {results['total_files']} files extracted")
         return True
     else:
-        print(f"\n💥 Extração falhou!")
-        print(f"❌ Nenhum arquivo foi extraído com sucesso")
+        print(f"\nExtraction failed!")
+        print(f"No files were extracted successfully")
         return False
 
 
