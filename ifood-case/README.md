@@ -62,24 +62,36 @@ Serão avaliados:
 3. Atualize o README com instruções de execução
 4. Envie o link do seu repositório
 
-## Estrutura da Solução
+## Estrutura da Solução V2
 
-### 1. Ingestão de Dados (src/)
-- Scripts PySpark para download e processamento dos dados
-- Criação de tabelas Delta Lake
-- Validação e limpeza dos dados
+### 🏗️ Arquitetura Implementada
+```
+Python (Extração) → PySpark (Consolidação) → SQL (Análises)
+```
 
-### 2. Análises (analysis/)
-- Notebooks com análises exploratórias
-- Respostas às perguntas do desafio
-- Visualizações e insights
+### 1. Extração Python (src/)
+- Download robusto via requests
+- Upload para DBFS
+- Validação de integridade
 
-## Tecnologias Utilizadas
+### 2. Consolidação PySpark (src/)
+- **Raw Layer**: Dados brutos
+- **Bronze Layer**: Padronizados e limpos
+- **Silver Layer**: Enriquecidos e validados
+- **Gold Layer**: Agregados para análises
 
-- **PySpark**: Processamento distribuído dos dados
-- **Delta Lake**: Armazenamento e versionamento
+### 3. Análises SQL (sql/)
+- Consultas otimizadas na camada Gold
+- Respostas às perguntas do case
+- Insights de negócio
+
+## Tecnologias Utilizadas V2
+
+- **Python**: Extração de dados (requests, os, time)
+- **PySpark**: Consolidação em 4 camadas Delta Lake
+- **SQL**: Análises finais otimizadas
+- **Delta Lake**: Armazenamento ACID com particionamento
 - **Databricks Community Edition**: Ambiente de execução
-- **Python**: Linguagem principal
 
 ## Como Executar
 
@@ -88,64 +100,63 @@ Serão avaliados:
 - Acesso à internet para download dos dados
 - Cluster Databricks com runtime 13.3 LTS ou superior
 
-### Opção 1: Execução via Notebooks (Recomendado)
+### Opção 1: Execução via Notebooks V2 (Recomendado)
 
 1. **Clone este repositório**
    ```bash
    git clone <seu-repositorio>
    ```
 
-2. **Importe os notebooks no Databricks**
+2. **Importe os notebooks V2 no Databricks**
    - Acesse seu workspace Databricks
    - Vá em "Workspace" → "Import"
    - Faça upload dos arquivos da pasta `notebooks/`
    - Ou importe diretamente do GitHub
 
-3. **Execute os notebooks na ordem:**
-   - `01_Data_Ingestion.py` - Ingestão completa dos dados
-   - `02_Business_Analysis.py` - Respostas às perguntas do case
-   - `03_Exploratory_Analysis.py` - Análise exploratória detalhada
+3. **Execute os notebooks V2 na ordem:**
+   - `01_Data_Extraction_Python.py` - Extração via Python
+   - `02_Data_Consolidation_PySpark.py` - Consolidação 4 camadas
+   - `03_Business_Analysis_SQL.py` - Análises SQL finais
 
-### Opção 2: Execução via Scripts Python
+### Opção 2: Execução via Pipeline V2
 
 1. **Configure o ambiente**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Execute o pipeline completo**
+2. **Execute o pipeline completo V2**
    ```python
    # No Databricks
-   %run src/main_pipeline.py
+   %run src/main_pipeline_v2.py
    ```
 
-3. **Execute análises específicas**
-   ```python
-   # Análises de negócio
-   %run analysis/business_questions.py
-
-   # Análise exploratória
-   %run analysis/exploratory_analysis.py
+3. **Execute consultas SQL**
+   ```sql
+   -- Carregue e execute
+   %run sql/business_questions.sql
    ```
 
 ### Estrutura de Execução
 
 ```
-1. Ingestão de Dados (src/main_pipeline.py)
-   ├── Download dos arquivos Parquet
-   ├── Processamento e padronização
-   ├── Criação da tabela Delta Lake
-   └── Validação de qualidade
+1. Extração Python (src/data_extraction.py)
+   ├── Download via requests
+   ├── Upload para DBFS
+   ├── Validação de integridade
+   └── Preparação para PySpark
 
-2. Análises de Negócio (analysis/business_questions.py)
+2. Consolidação PySpark (src/data_consolidation.py)
+   ├── Raw Layer (dados brutos)
+   ├── Bronze Layer (padronizados)
+   ├── Silver Layer (enriquecidos)
+   ├── Gold Layer (agregados)
+   └── Otimização Delta Lake
+
+3. Análises SQL (sql/business_questions.sql)
    ├── Pergunta 1: Média Yellow Taxis
    ├── Pergunta 2: Passageiros por hora em Maio
-   └── Insights adicionais
-
-3. Análise Exploratória (analysis/exploratory_analysis.py)
-   ├── Padrões temporais
-   ├── Distribuições de tarifas
-   ├── Qualidade dos dados
-   └── Visualizações
+   ├── Análises complementares
+   └── Insights de negócio
 ```
 

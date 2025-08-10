@@ -4,29 +4,26 @@
 
 ```
 ifood-case/
-├── 📋 README.md                    # Documentação principal do projeto
-├── 🚀 EXECUTION_GUIDE.md           # Guia passo-a-passo de execução
-├── 🔧 TECHNICAL_DETAILS.md         # Detalhes técnicos e arquitetura
-├── 📊 PROJECT_STRUCTURE.md         # Este arquivo - estrutura do projeto
-├── ⚡ quick_start.py               # Script de execução rápida
-├── 📦 requirements.txt             # Dependências Python
+├── 📋 README.md                         # Documentação principal do projeto
+├── 🚀 EXECUTION_GUIDE.md                # Guia passo-a-passo de execução
+├── 🔧 TECHNICAL_DETAILS.md              # Detalhes técnicos e arquitetura
+├── 📊 PROJECT_STRUCTURE.md              # Este arquivo - estrutura do projeto
+├── 📦 requirements.txt                  # Dependências Python
 │
-├── 📂 src/                         # Código fonte principal
+├── 📂 src/                              # Código fonte V2
 │   ├── __init__.py
-│   ├── config.py                   # Configurações centralizadas
-│   ├── data_ingestion.py          # Pipeline de ingestão de dados
-│   ├── data_quality.py            # Validação e qualidade dos dados
-│   └── main_pipeline.py           # Orquestrador principal
+│   ├── config.py                        # Configurações das 4 camadas
+│   ├── data_extraction.py               # Extração via Python
+│   ├── data_consolidation.py            # Consolidação PySpark (4 camadas)
+│   └── main_pipeline_v2.py              # Orquestrador completo V2
 │
-├── 📂 analysis/                    # Scripts de análise
-│   ├── __init__.py
-│   ├── business_questions.py      # Respostas às perguntas do case
-│   └── exploratory_analysis.py    # Análise exploratória completa
+├── 📂 sql/                              # Consultas SQL
+│   └── business_questions.sql           # Respostas finais em SQL
 │
-└── 📂 notebooks/                   # Notebooks Databricks
-    ├── 01_Data_Ingestion.py       # Notebook de ingestão
-    ├── 02_Business_Analysis.py    # Notebook de análises de negócio
-    └── 03_Exploratory_Analysis.py # Notebook de análise exploratória
+└── 📂 notebooks/                        # Notebooks V2 (Execução Sequencial)
+    ├── 01_Data_Extraction_Python.py     # Extração Python
+    ├── 02_Data_Consolidation_PySpark.py # Consolidação PySpark
+    └── 03_Business_Analysis_SQL.py      # Análises SQL
 ```
 
 ## 📋 Descrição dos Arquivos
@@ -47,109 +44,97 @@ ifood-case/
 | `quick_start.py` | Script completo para execução rápida no Databricks | Demonstração |
 | `requirements.txt` | Dependências Python para desenvolvimento local | Setup |
 
-### 🔧 Código Fonte (`src/`)
+### 🔧 Código Fonte V2 (`src/`)
 
 | Arquivo | Responsabilidade | Principais Classes/Funções |
 |---------|------------------|---------------------------|
-| `config.py` | Configurações centralizadas | `DATA_SOURCES`, `SPARK_CONFIGS` |
-| `data_ingestion.py` | Ingestão e processamento de dados | `NYCTaxiDataIngestion` |
-| `data_quality.py` | Validação e qualidade | `DataQualityValidator` |
-| `main_pipeline.py` | Orquestração completa | `NYCTaxiPipeline` |
+| `config.py` | Configurações das 4 camadas | `get_table_name()`, camadas Raw/Bronze/Silver/Gold |
+| `data_extraction.py` | Extração via Python | `NYCTaxiDataExtractor` |
+| `data_consolidation.py` | Consolidação PySpark | `DataLakeConsolidator` |
+| `main_pipeline_v2.py` | Orquestração completa V2 | `NYCTaxiPipelineV2` |
 
-### 📊 Análises (`analysis/`)
+### 📊 Consultas SQL (`sql/`)
 
 | Arquivo | Foco | Saídas |
 |---------|------|--------|
-| `business_questions.py` | Perguntas específicas do case | Respostas numéricas e tabelas |
-| `exploratory_analysis.py` | Análise exploratória completa | Insights e visualizações |
+| `business_questions.sql` | Perguntas do case + análises | Respostas SQL otimizadas |
 
-### 📓 Notebooks (`notebooks/`)
+### 📓 Notebooks V2 (`notebooks/`)
 
 | Notebook | Objetivo | Tempo Estimado |
 |----------|----------|----------------|
-| `01_Data_Ingestion.py` | Ingestão completa dos dados | 15-20 min |
-| `02_Business_Analysis.py` | Respostas às perguntas do case | 5-10 min |
-| `03_Exploratory_Analysis.py` | Análise exploratória detalhada | 10-15 min |
+| `01_Data_Extraction_Python.py` | Extração via Python | 10-15 min |
+| `02_Data_Consolidation_PySpark.py` | Consolidação 4 camadas | 15-20 min |
+| `03_Business_Analysis_SQL.py` | Análises SQL finais | 5-10 min |
 
 ## 🔄 Fluxo de Execução
 
-### Opção 1: Notebooks (Recomendado)
+### Opção 1: Notebooks V2 (Recomendado)
 ```
-1. 01_Data_Ingestion.py
-   ├── Download dos dados NYC Taxi
-   ├── Processamento e padronização
-   ├── Criação da tabela Delta Lake
-   └── Validação inicial
+1. 01_Data_Extraction_Python.py
+   ├── Download via Python requests
+   ├── Upload para DBFS
+   ├── Validação dos arquivos
+   └── Preparação para PySpark
 
-2. 02_Business_Analysis.py
+2. 02_Data_Consolidation_PySpark.py
+   ├── Camada Raw (dados brutos)
+   ├── Camada Bronze (padronizados)
+   ├── Camada Silver (enriquecidos)
+   ├── Camada Gold (agregados)
+   └── Otimização Delta Lake
+
+3. 03_Business_Analysis_SQL.py
    ├── Pergunta 1: Média Yellow Taxis
    ├── Pergunta 2: Passageiros por hora (Maio)
-   └── Análises complementares
-
-3. 03_Exploratory_Analysis.py
-   ├── Padrões temporais
-   ├── Distribuições de dados
-   ├── Qualidade dos dados
-   └── Visualizações
-```
-
-### Opção 2: Scripts Python
-```
-1. main_pipeline.py
-   ├── Executa data_ingestion.py
-   ├── Executa data_quality.py
-   └── Gera relatórios
-
-2. business_questions.py
-   ├── Carrega dados da tabela Delta
-   └── Responde perguntas específicas
-
-3. exploratory_analysis.py
-   ├── Análise exploratória completa
+   ├── Análises complementares
    └── Insights de negócio
 ```
 
-### Opção 3: Execução Rápida
+### Opção 2: Pipeline Completo V2
 ```
-quick_start.py
-├── Ingestão simplificada (5 arquivos)
-├── Análises principais
-└── Resultados em ~10-15 minutos
+main_pipeline_v2.py
+├── Executa data_extraction.py (Python)
+├── Executa data_consolidation.py (PySpark)
+├── Executa business_questions.sql (SQL)
+└── Gera relatórios finais
 ```
 
 ## 🎯 Pontos de Entrada
 
 ### Para Avaliadores do Case
-1. **Início Rápido**: Execute `quick_start.py` no Databricks
-2. **Análise Completa**: Execute os notebooks na ordem
-3. **Código Fonte**: Revise os arquivos em `src/`
+1. **Execução Sequencial**: Execute notebooks V2 na ordem (01 → 02 → 03)
+2. **Pipeline Completo**: Execute `main_pipeline_v2.py`
+3. **Código Fonte**: Revise arquivos em `src/` (versão V2)
 
 ### Para Desenvolvedores
-1. **Configurações**: Comece com `src/config.py`
-2. **Pipeline Principal**: `src/main_pipeline.py`
-3. **Extensões**: Adicione análises em `analysis/`
+1. **Configurações**: Comece com `src/config.py` (4 camadas)
+2. **Pipeline Principal**: `src/main_pipeline_v2.py`
+3. **Consultas**: Adicione análises em `sql/`
 
 ### Para Usuários Finais
-1. **Resultados**: Notebooks `02_Business_Analysis.py`
-2. **Insights**: Notebook `03_Exploratory_Analysis.py`
-3. **Dados**: Tabela `main.nyc_taxi.trips_delta`
+1. **Resultados**: Notebook `03_Business_Analysis_SQL.py`
+2. **Consultas**: Arquivo `sql/business_questions.sql`
+3. **Dados**: Tabela `main.nyc_taxi.gold_trips` (camada analítica)
 
 ## 📊 Saídas do Projeto
 
-### Dados Processados
-- **Tabela Delta**: `main.nyc_taxi.trips_delta`
-- **Registros**: ~13-15 milhões (Jan-Mai 2023)
-- **Particionamento**: `taxi_type`, `year`, `month`
+### Dados Processados (4 Camadas)
+- **Raw**: `main.nyc_taxi.raw_trips` (dados brutos)
+- **Bronze**: `main.nyc_taxi.bronze_trips` (padronizados)
+- **Silver**: `main.nyc_taxi.silver_trips` (enriquecidos)
+- **Gold**: `main.nyc_taxi.gold_trips` (agregados para análises)
 
 ### Análises Geradas
-- **Pergunta 1**: Média de tarifas Yellow Taxis por mês
-- **Pergunta 2**: Média de passageiros por hora em Maio
-- **Exploratória**: Padrões temporais, distribuições, qualidade
+- **Pergunta 1**: Média de tarifas Yellow Taxis (SQL otimizado)
+- **Pergunta 2**: Média de passageiros por hora em Maio (SQL otimizado)
+- **Complementares**: Insights e análises adicionais
 
-### Artefatos Técnicos
-- **Pipeline PySpark**: Código modular e reutilizável
-- **Validações**: Relatórios de qualidade automatizados
-- **Documentação**: Guias técnicos e de execução
+### Artefatos Técnicos V2
+- **Extração Python**: Download robusto com retry
+- **Consolidação PySpark**: 4 camadas Delta Lake
+- **Análises SQL**: Consultas otimizadas na camada Gold
+- **Documentação**: Guias atualizados para V2
 
 ## 🔧 Configurações Importantes
 
@@ -182,23 +167,23 @@ REQUIRED_COLUMNS = [
 
 ## 🚀 Como Começar
 
-### Execução Imediata (5 minutos)
+### Execução V2 Sequencial (30-40 minutos)
 1. Abra o Databricks Community Edition
-2. Importe `quick_start.py`
-3. Execute todas as células
-4. Veja os resultados
-
-### Execução Completa (30-45 minutos)
-1. Clone o repositório
-2. Importe os notebooks no Databricks
+2. Importe os 3 notebooks V2
 3. Execute na ordem: 01 → 02 → 03
-4. Explore os resultados e análises
+4. Veja resultados SQL finais
+
+### Execução V2 Pipeline Completo (35-45 minutos)
+1. Clone o repositório
+2. Importe `src/main_pipeline_v2.py`
+3. Execute o pipeline completo
+4. Explore tabelas Delta criadas
 
 ### Desenvolvimento Local
 1. `pip install -r requirements.txt`
 2. Configure ambiente Spark local
-3. Adapte configurações em `config.py`
-4. Execute scripts Python
+3. Adapte configurações em `config.py` (4 camadas)
+4. Execute módulos V2 separadamente
 
 ## 📞 Suporte
 
