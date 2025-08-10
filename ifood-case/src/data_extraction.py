@@ -1,6 +1,6 @@
 """
-Data extraction module for NYC Taxi data
-Handles download and upload to DBFS with robust error handling
+Módulo de extração de dados para dados NYC Taxi
+Gerencia download e upload para DBFS com tratamento robusto de erros
 """
 
 import requests
@@ -13,31 +13,31 @@ from config import DATA_SOURCES, LOCAL_DATA_DIR, DBFS_RAW_DIR
 
 class NYCTaxiDataExtractor:
     """
-    Data extractor for NYC Taxi data via Python requests
+    Extrator de dados para dados NYC Taxi via Python requests
     """
-    
+
     def __init__(self):
-        """Initialize the extractor"""
+        """Inicializa o extrator"""
         self.downloaded_files = []
         self.failed_downloads = []
         self.local_dir = LOCAL_DATA_DIR
         self.dbfs_dir = DBFS_RAW_DIR
         
-        # Create local directory
+        # Cria diretório local
         os.makedirs(self.local_dir, exist_ok=True)
-        print(f"Local directory created: {self.local_dir}")
+        print(f"Diretório local criado: {self.local_dir}")
     
     def download_file(self, url: str, local_path: str, max_retries: int = 3) -> bool:
         """
-        Download file via Python requests with retry logic
-        
+        Faz download do arquivo via Python requests com lógica de retry
+
         Args:
-            url: File URL
-            local_path: Local path to save file
-            max_retries: Maximum number of retry attempts
-            
+            url: URL do arquivo
+            local_path: Caminho local para salvar o arquivo
+            max_retries: Número máximo de tentativas de retry
+
         Returns:
-            True if download was successful
+            True se o download foi bem-sucedido
         """
         for attempt in range(max_retries):
             try:

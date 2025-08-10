@@ -5,12 +5,12 @@
 # MAGIC 
 # MAGIC Este notebook implementa a **terceira e última etapa** da arquitetura:
 # MAGIC 
-# MAGIC ### 🏗️ Arquitetura V2:
-# MAGIC 1. **Python**: Extração dos dados ✅ (notebook 1)
-# MAGIC 2. **PySpark**: Consolidação no Delta Lake ✅ (notebook 2)
-# MAGIC 3. **SQL**: Respostas finais do desafio 🎯 (este notebook)
-# MAGIC 
-# MAGIC ### 📊 Responsabilidades deste Notebook:
+# MAGIC ### Arquitetura V2:
+# MAGIC 1. **Python**: Extração dos dados (notebook 1)
+# MAGIC 2. **PySpark**: Consolidação no Delta Lake (notebook 2)
+# MAGIC 3. **SQL**: Respostas finais do desafio (este notebook)
+# MAGIC
+# MAGIC ### Responsabilidades deste Notebook:
 # MAGIC - Responder às 2 perguntas principais do case técnico
 # MAGIC - Gerar análises complementares e insights
 # MAGIC - Validar a qualidade dos dados processados

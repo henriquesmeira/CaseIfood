@@ -1,14 +1,14 @@
 """
-Central configuration for iFood Case - Data Architect
+Configurações centralizadas para o Case iFood - Data Architect
 """
 
 from typing import Dict, List
 
-# Data Lake configuration
+# Configurações do Data Lake
 CATALOG_NAME = "main"
 SCHEMA_NAME = "nyc_taxi"
 
-# Data Lake layers
+# Camadas do Data Lake
 RAW_TABLE = "raw_trips"
 BRONZE_TABLE = "bronze_trips"
 SILVER_TABLE = "silver_trips"
@@ -24,7 +24,7 @@ SPARK_CONFIGS = {
     "spark.databricks.delta.autoCompact.enabled": "true"
 }
 
-# NYC Taxi data URLs (January to May 2023)
+# URLs dos dados NYC Taxi (Janeiro a Maio 2023)
 DATA_SOURCES = {
     "yellow": {
         "2023-01": "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet",
@@ -42,7 +42,7 @@ DATA_SOURCES = {
     }
 }
 
-# Required columns as per case specification
+# Colunas obrigatórias conforme especificação do case
 REQUIRED_COLUMNS = [
     "VendorID",
     "passenger_count", 
@@ -86,13 +86,13 @@ OPTIMIZATION_CONFIG = {
     "z_order_columns": ["tpep_pickup_datetime", "taxi_type"]
 }
 
-# Directory configuration
+# Configurações de diretórios
 LOCAL_DATA_DIR = "/tmp/nyc_taxi_data"
 DBFS_RAW_DIR = "/tmp/nyc_taxi/raw"
 DBFS_PROCESSED_DIR = "/tmp/nyc_taxi/processed"
 
 def get_table_name(layer: str) -> str:
-    """Returns full table name for specified layer"""
+    """Retorna o nome completo da tabela para a camada especificada"""
     layer_tables = {
         "raw": RAW_TABLE,
         "bronze": BRONZE_TABLE,

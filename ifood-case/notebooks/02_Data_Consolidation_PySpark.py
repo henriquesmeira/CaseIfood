@@ -5,12 +5,12 @@
 # MAGIC 
 # MAGIC Este notebook implementa a **segunda etapa** da arquitetura:
 # MAGIC 
-# MAGIC ### 🏗️ Arquitetura V2:
-# MAGIC 1. **Python**: Extração dos dados ✅ (notebook anterior)
-# MAGIC 2. **PySpark**: Consolidação no Delta Lake 🔄 (este notebook)
+# MAGIC ### Arquitetura V2:
+# MAGIC 1. **Python**: Extração dos dados (notebook anterior)
+# MAGIC 2. **PySpark**: Consolidação no Delta Lake (este notebook)
 # MAGIC 3. **SQL**: Respostas finais do desafio (próximo notebook)
-# MAGIC 
-# MAGIC ### 🔄 Responsabilidades deste Notebook:
+# MAGIC
+# MAGIC ### Responsabilidades deste Notebook:
 # MAGIC - Criação das camadas Raw → Bronze → Silver → Gold
 # MAGIC - Padronização e limpeza dos dados
 # MAGIC - Otimização das tabelas Delta Lake

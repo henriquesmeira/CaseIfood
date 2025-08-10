@@ -1,19 +1,19 @@
 -- ============================================================================
 -- iFood Case - Data Architect
--- Business Questions SQL Analysis
+-- Análise SQL das Perguntas de Negócio
 -- ============================================================================
 
--- Initial configuration
+-- Configuração inicial
 USE CATALOG main;
 USE SCHEMA nyc_taxi;
 
 -- ============================================================================
--- QUESTION 1: Average total amount for yellow taxis per month
+-- PERGUNTA 1: Média do valor total para táxis amarelos por mês
 -- ============================================================================
 
--- Detailed answer by month
-SELECT 
-    'QUESTION 1 - MONTHLY BREAKDOWN' as analysis,
+-- Resposta detalhada por mês
+SELECT
+    'PERGUNTA 1 - DETALHAMENTO MENSAL' as analysis,
     year_month,
     ROUND(AVG(avg_total_amount), 2) as avg_total_amount,
     SUM(total_trips) as total_trips,
@@ -23,9 +23,9 @@ WHERE taxi_type = 'yellow'
 GROUP BY year_month
 ORDER BY year_month;
 
--- Main answer - Overall average
-SELECT 
-    'QUESTION 1 - MAIN ANSWER' as analysis,
+-- Resposta principal - Média geral
+SELECT
+    'PERGUNTA 1 - RESPOSTA PRINCIPAL' as analysis,
     ROUND(
         SUM(sum_total_amount) / SUM(total_trips), 2
     ) as avg_total_amount_yellow_taxis,
@@ -51,10 +51,10 @@ GROUP BY year_month
 ORDER BY year_month;
 
 -- ============================================================================
--- QUESTION 2: Average passengers per hour in May for all taxis
+-- PERGUNTA 2: Média de passageiros por hora em Maio para todos os táxis
 -- ============================================================================
 
--- Main answer - Average per hour in May
+-- Resposta principal - Média por hora em Maio
 SELECT 
     'QUESTION 2 - MAIN ANSWER' as analysis,
     pickup_hour as hour,

@@ -1,200 +1,200 @@
 # iFood Case - Data Architect
 
-## Overview
+## Visão Geral
 
-This project implements a complete data engineering solution for NYC Taxi data analysis, answering specific questions from the iFood technical case for the Data Architect position.
+Este projeto implementa uma solução completa de engenharia de dados para análise dos dados de táxis de NYC, respondendo às perguntas específicas do case técnico iFood para a posição de Data Architect.
 
-### Main Objectives
+### Objetivos Principais
 
-1. **Data Ingestion**: Robust pipeline for downloading and processing NYC Taxi data
-2. **Business Analysis**: Precise answers to technical case questions
-3. **Scalable Architecture**: Implementation using PySpark and Delta Lake
-4. **Data Quality**: Automated validation and cleaning
+1. **Ingestão de Dados**: Pipeline robusto para download e processamento dos dados NYC Taxi
+2. **Análise de Negócio**: Respostas precisas às perguntas do case técnico
+3. **Arquitetura Escalável**: Implementação usando PySpark e Delta Lake
+4. **Qualidade de Dados**: Validação e limpeza automatizadas
 
-### Case Questions Answered
+### Perguntas do Case Respondidas
 
-1. **Question 1**: What is the average total amount received per month considering all yellow taxis in the fleet?
-2. **Question 2**: What is the average number of passengers per hour of the day who took taxis in May considering all taxis in the fleet?
+1. **Pergunta 1**: Qual a média de valor total recebido em um mês considerando todos os yellow taxis da frota?
+2. **Pergunta 2**: Qual a média de passageiros por cada hora do dia que pegaram táxi no mês de maio considerando todos os táxis da frota?
 
-### Solution Architecture
+### Arquitetura da Solução
 
 ```
-NYC Taxi Data → PySpark Processing → Delta Lake → SQL Analysis
+Dados NYC Taxi → Processamento PySpark → Delta Lake → Análise SQL
 ```
 
-## Project Structure V2
+## Estrutura do Projeto V2
 
 ```
 ifood-case/
-├── src/                              # Source code V2
-│   ├── config.py                     # 4-layer configuration
-│   ├── data_extraction.py            # Python extraction
-│   ├── data_consolidation.py         # PySpark consolidation
-│   └── main_pipeline_v2.py           # V2 orchestrator
-├── sql/                              # SQL queries
-│   └── business_questions.sql        # Final answers
-├── notebooks/                        # V2 notebooks
+├── src/                              # Código fonte V2
+│   ├── config.py                     # Configuração das 4 camadas
+│   ├── data_extraction.py            # Extração Python
+│   ├── data_consolidation.py         # Consolidação PySpark
+│   └── main_pipeline_v2.py           # Orquestrador V2
+├── sql/                              # Consultas SQL
+│   └── business_questions.sql        # Respostas finais
+├── notebooks/                        # Notebooks V2
 │   ├── 01_Data_Extraction_Python.py
 │   ├── 02_Data_Consolidation_PySpark.py
 │   └── 03_Business_Analysis_SQL.py
-└── docs/                             # Documentation
+└── docs/                             # Documentação
 ```
 
-## Solution Structure V2
+## Estrutura da Solução V2
 
-### Architecture Implemented
+### Arquitetura Implementada
 ```
-Python (Extraction) → PySpark (Consolidation) → SQL (Analysis)
+Python (Extração) → PySpark (Consolidação) → SQL (Análise)
 ```
 
-### 1. Python Extraction (src/)
-- Robust download via requests
-- Upload to DBFS
-- Integrity validation
+### 1. Extração Python (src/)
+- Download robusto via requests
+- Upload para DBFS
+- Validação de integridade
 
-### 2. PySpark Consolidation (src/)
-- **Raw Layer**: Raw data
-- **Bronze Layer**: Standardized and clean
-- **Silver Layer**: Enriched and validated
-- **Gold Layer**: Aggregated for analysis
+### 2. Consolidação PySpark (src/)
+- **Camada Raw**: Dados brutos
+- **Camada Bronze**: Padronizados e limpos
+- **Camada Silver**: Enriquecidos e validados
+- **Camada Gold**: Agregados para análise
 
-### 3. SQL Analysis (sql/)
-- Optimized queries on Gold layer
-- Case question answers
-- Business insights
+### 3. Análise SQL (sql/)
+- Consultas otimizadas na camada Gold
+- Respostas às perguntas do case
+- Insights de negócio
 
-## Technologies Used V2
+## Tecnologias Utilizadas V2
 
-- **Python**: Data extraction (requests, os, time)
-- **PySpark**: 4-layer Delta Lake consolidation
-- **SQL**: Optimized final analysis
-- **Delta Lake**: ACID storage with partitioning
-- **Databricks Community Edition**: Execution environment
+- **Python**: Extração de dados (requests, os, time)
+- **PySpark**: Consolidação Delta Lake em 4 camadas
+- **SQL**: Análise final otimizada
+- **Delta Lake**: Armazenamento ACID com particionamento
+- **Databricks Community Edition**: Ambiente de execução
 
-## How to Execute
+## Como Executar
 
-### Option 1: V2 Notebooks Execution (Recommended)
+### Opção 1: Execução dos Notebooks V2 (Recomendado)
 
-1. **Clone this repository**
+1. **Clone este repositório**
    ```bash
-   git clone <your-repository>
+   git clone <seu-repositorio>
    ```
 
-2. **Import V2 notebooks to Databricks**
-   - Access your Databricks workspace
-   - Go to "Workspace" → "Import"
-   - Upload files from `notebooks/` folder
-   - Or import directly from GitHub
+2. **Importe os notebooks V2 para o Databricks**
+   - Acesse seu workspace Databricks
+   - Vá em "Workspace" → "Import"
+   - Faça upload dos arquivos da pasta `notebooks/`
+   - Ou importe diretamente do GitHub
 
-3. **Execute V2 notebooks in order:**
-   - `01_Data_Extraction_Python.py` - Python extraction
-   - `02_Data_Consolidation_PySpark.py` - 4-layer consolidation
-   - `03_Business_Analysis_SQL.py` - Final SQL analysis
+3. **Execute os notebooks V2 na ordem:**
+   - `01_Data_Extraction_Python.py` - Extração Python
+   - `02_Data_Consolidation_PySpark.py` - Consolidação em 4 camadas
+   - `03_Business_Analysis_SQL.py` - Análise SQL final
 
-### Option 2: V2 Pipeline Execution
+### Opção 2: Execução do Pipeline V2
 
-1. **Configure environment**
+1. **Configure o ambiente**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Execute complete V2 pipeline**
+2. **Execute o pipeline V2 completo**
    ```python
-   # In Databricks
+   # No Databricks
    %run src/main_pipeline_v2.py
    ```
 
-3. **Execute SQL queries**
+3. **Execute as consultas SQL**
    ```sql
-   -- Load and execute
+   -- Carregue e execute
    %run sql/business_questions.sql
    ```
 
-## Pipeline Flow
+## Fluxo do Pipeline
 
 ```
-1. Python Extraction (src/data_extraction.py)
+1. Extração Python (src/data_extraction.py)
    ├── Download via requests
-   ├── Upload to DBFS
-   ├── Integrity validation
-   └── Preparation for PySpark
+   ├── Upload para DBFS
+   ├── Validação de integridade
+   └── Preparação para PySpark
 
-2. PySpark Consolidation (src/data_consolidation.py)
-   ├── Raw Layer (raw data)
-   ├── Bronze Layer (standardized)
-   ├── Silver Layer (enriched)
-   ├── Gold Layer (aggregated)
-   └── Delta Lake optimization
+2. Consolidação PySpark (src/data_consolidation.py)
+   ├── Camada Raw (dados brutos)
+   ├── Camada Bronze (padronizados)
+   ├── Camada Silver (enriquecidos)
+   ├── Camada Gold (agregados)
+   └── Otimização Delta Lake
 
-3. SQL Analysis (sql/business_questions.sql)
-   ├── Question 1: Yellow Taxi Average
-   ├── Question 2: Passengers per hour in May
-   ├── Complementary analysis
-   └── Business insights
+3. Análise SQL (sql/business_questions.sql)
+   ├── Pergunta 1: Média Táxi Amarelo
+   ├── Pergunta 2: Passageiros por hora em Maio
+   ├── Análises complementares
+   └── Insights de negócio
 ```
 
-## Results
+## Resultados
 
-### Data Processed (4 Layers)
-- **Raw**: `main.nyc_taxi.raw_trips` (raw data)
-- **Bronze**: `main.nyc_taxi.bronze_trips` (standardized)
-- **Silver**: `main.nyc_taxi.silver_trips` (enriched)
-- **Gold**: `main.nyc_taxi.gold_trips` (aggregated for analysis)
+### Dados Processados (4 Camadas)
+- **Raw**: `main.nyc_taxi.raw_trips` (dados brutos)
+- **Bronze**: `main.nyc_taxi.bronze_trips` (padronizados)
+- **Silver**: `main.nyc_taxi.silver_trips` (enriquecidos)
+- **Gold**: `main.nyc_taxi.gold_trips` (agregados para análise)
 
-### Analysis Generated
-- **Question 1**: Yellow taxi fare average (optimized SQL)
-- **Question 2**: Passengers per hour in May (optimized SQL)
-- **Complementary**: Additional insights and analysis
+### Análises Geradas
+- **Pergunta 1**: Média de tarifa táxi amarelo (SQL otimizado)
+- **Pergunta 2**: Passageiros por hora em Maio (SQL otimizado)
+- **Complementares**: Insights e análises adicionais
 
-### V2 Technical Artifacts
-- **Python Extraction**: Robust download with retry
-- **PySpark Consolidation**: 4-layer Delta Lake
-- **SQL Analysis**: Optimized queries on Gold layer
-- **Documentation**: Updated guides for V2
+### Artefatos Técnicos V2
+- **Extração Python**: Download robusto com retry
+- **Consolidação PySpark**: Delta Lake em 4 camadas
+- **Análise SQL**: Consultas otimizadas na camada Gold
+- **Documentação**: Guias atualizados para V2
 
-## Data Sources
+## Fontes de Dados
 
-The data comes from the NYC Taxi & Limousine Commission:
+Os dados vêm da NYC Taxi & Limousine Commission:
 - **URL**: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
-- **Period**: January to May 2023
-- **Types**: Yellow and Green taxis
-- **Format**: Parquet files
+- **Período**: Janeiro a Maio 2023
+- **Tipos**: Táxis amarelos e verdes
+- **Formato**: Arquivos Parquet
 
-## Key Features
+## Características Principais
 
-- **Robust Error Handling**: Retry logic and fallbacks
-- **Scalable Architecture**: 4-layer data lake design
-- **Performance Optimization**: Delta Lake with partitioning
-- **Data Quality**: Automated validation and cleaning
-- **Business Focus**: Direct answers to case questions
+- **Tratamento Robusto de Erros**: Lógica de retry e fallbacks
+- **Arquitetura Escalável**: Design de data lake em 4 camadas
+- **Otimização de Performance**: Delta Lake com particionamento
+- **Qualidade de Dados**: Validação e limpeza automatizadas
+- **Foco no Negócio**: Respostas diretas às perguntas do case
 
-## Requirements
+## Requisitos
 
-- Databricks Community Edition (or full workspace)
+- Databricks Community Edition (ou workspace completo)
 - Python 3.8+
 - PySpark 3.x
-- Delta Lake support
+- Suporte ao Delta Lake
 
-## Execution Time
+## Tempo de Execução
 
-- **V2 Sequential Execution**: 30-40 minutes
-- **V2 Complete Pipeline**: 35-45 minutes
-- **Individual Notebooks**: 10-20 minutes each
+- **Execução Sequencial V2**: 30-40 minutos
+- **Pipeline Completo V2**: 35-45 minutos
+- **Notebooks Individuais**: 10-20 minutos cada
 
-## Next Steps
+## Próximos Passos
 
-1. Execute notebooks in order (01 → 02 → 03)
-2. Or execute `main_pipeline_v2.py` for complete pipeline
-3. Explore created Delta tables
-4. Run custom SQL queries on `sql/business_questions.sql`
+1. Execute os notebooks na ordem (01 → 02 → 03)
+2. Ou execute `main_pipeline_v2.py` para pipeline completo
+3. Explore as tabelas Delta criadas
+4. Execute consultas SQL customizadas em `sql/business_questions.sql`
 
-## Case Technical Completion
+## Conclusão do Case Técnico
 
-This project demonstrates:
-- **Data Engineering**: Complete ETL pipeline
-- **PySpark Expertise**: Advanced transformations and optimizations
-- **SQL Proficiency**: Complex analytical queries
-- **Architecture Design**: Scalable 4-layer data lake
-- **Business Understanding**: Direct answers to case questions
+Este projeto demonstra:
+- **Engenharia de Dados**: Pipeline ETL completo
+- **Expertise PySpark**: Transformações e otimizações avançadas
+- **Proficiência SQL**: Consultas analíticas complexas
+- **Design de Arquitetura**: Data lake escalável em 4 camadas
+- **Entendimento de Negócio**: Respostas diretas às perguntas do case
 
-The solution is production-ready and follows data engineering best practices.
+A solução está pronta para produção e segue as melhores práticas de engenharia de dados.
