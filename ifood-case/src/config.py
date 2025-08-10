@@ -7,7 +7,12 @@ from typing import Dict, List
 # Configurações do Data Lake
 CATALOG_NAME = "main"
 SCHEMA_NAME = "nyc_taxi"
-TABLE_NAME = "trips_delta"
+
+# Camadas do Data Lake
+RAW_TABLE = "raw_trips"           # Camada Raw (dados brutos)
+BRONZE_TABLE = "bronze_trips"     # Camada Bronze (padronizada)
+SILVER_TABLE = "silver_trips"     # Camada Silver (limpa e enriquecida)
+GOLD_TABLE = "gold_trips"         # Camada Gold (agregada para análises)
 
 # Configurações de processamento
 SPARK_CONFIGS = {
@@ -81,9 +86,21 @@ OPTIMIZATION_CONFIG = {
     "z_order_columns": ["tpep_pickup_datetime", "taxi_type"]
 }
 
-def get_full_table_name() -> str:
-    """Retorna o nome completo da tabela no formato catalog.schema.table"""
-    return f"{CATALOG_NAME}.{SCHEMA_NAME}.{TABLE_NAME}"
+# Configurações de diretórios
+LOCAL_DATA_DIR = "/tmp/nyc_taxi_data"
+DBFS_RAW_DIR = "/FileStore/nyc_taxi/raw"
+DBFS_PROCESSED_DIR = "/FileStore/nyc_taxi/processed"
+
+def get_table_name(layer: str) -> str:
+    """Retorna o nome completo da tabela para uma camada específica"""
+    layer_tables = {
+        "raw": RAW_TABLE,
+        "bronze": BRONZE_TABLE,
+        "silver": SILVER_TABLE,
+        "gold": GOLD_TABLE
+    }
+    table = layer_tables.get(layer, RAW_TABLE)
+    return f"{CATALOG_NAME}.{SCHEMA_NAME}.{table}"
 
 def get_required_columns_for_taxi_type(taxi_type: str) -> List[str]:
     """
