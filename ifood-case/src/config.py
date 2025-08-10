@@ -88,8 +88,8 @@ OPTIMIZATION_CONFIG = {
 
 # Configurações de diretórios
 LOCAL_DATA_DIR = "/tmp/nyc_taxi_data"
-DBFS_RAW_DIR = "/FileStore/nyc_taxi/raw"
-DBFS_PROCESSED_DIR = "/FileStore/nyc_taxi/processed"
+DBFS_RAW_DIR = "/tmp/nyc_taxi/raw"  # Usando /tmp que é permitido no Community Edition
+DBFS_PROCESSED_DIR = "/tmp/nyc_taxi/processed"
 
 def get_table_name(layer: str) -> str:
     """Retorna o nome completo da tabela para uma camada específica"""

@@ -33,7 +33,7 @@ from pyspark.sql.types import *
 # Configurações do Data Lake
 CATALOG_NAME = "main"
 SCHEMA_NAME = "nyc_taxi"
-DBFS_RAW_DIR = "/FileStore/nyc_taxi/raw"
+DBFS_RAW_DIR = "/tmp/nyc_taxi/raw"  # Usando /tmp que é permitido
 
 # Nomes das tabelas por camada
 RAW_TABLE = "raw_trips"

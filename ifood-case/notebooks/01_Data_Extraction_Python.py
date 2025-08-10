@@ -29,7 +29,7 @@ from typing import Dict, List, Tuple
 
 # Configurações
 LOCAL_DATA_DIR = "/tmp/nyc_taxi_data"
-DBFS_RAW_DIR = "/FileStore/nyc_taxi/raw"
+DBFS_RAW_DIR = "/tmp/nyc_taxi/raw"  # Usando /tmp que é permitido
 
 # URLs dos dados NYC Taxi (Janeiro a Maio 2023)
 DATA_SOURCES = {
@@ -54,6 +54,7 @@ print("="*50)
 print(f"📊 Total de arquivos: {sum(len(months) for months in DATA_SOURCES.values())}")
 print(f"📁 Diretório local: {LOCAL_DATA_DIR}")
 print(f"📁 Diretório DBFS: {DBFS_RAW_DIR}")
+print(f"💡 Usando /tmp no DBFS (compatível com Community Edition)")
 
 # COMMAND ----------
 
@@ -134,50 +135,68 @@ def download_file_python(url: str, local_path: str, max_retries: int = 3) -> boo
 
 def upload_to_dbfs(local_path: str, dbfs_path: str) -> bool:
     """
-    Upload do arquivo local para DBFS
+    Upload do arquivo local para DBFS (com fallback para local)
     """
     try:
         filename = os.path.basename(local_path)
         print(f"  📤 Upload para DBFS: {filename}")
-        
+
         # Verifica se arquivo local existe
         if not os.path.exists(local_path):
             raise FileNotFoundError(f"Arquivo local não encontrado: {local_path}")
-        
+
         # Cria diretório DBFS se não existir
         try:
             dbutils.fs.mkdirs(os.path.dirname(dbfs_path))
-        except:
-            pass  # Diretório pode já existir
-        
+        except Exception as mkdir_error:
+            print(f"    ⚠️  Erro ao criar diretório DBFS: {mkdir_error}")
+            if "Public DBFS root is disabled" in str(mkdir_error):
+                print(f"    💡 DBFS público desabilitado - mantendo arquivo local")
+                return True  # Considera sucesso, mas mantém local
+            raise mkdir_error
+
         # Remove arquivo DBFS se existir
         try:
             dbutils.fs.rm(dbfs_path)
         except:
             pass  # Arquivo pode não existir
-        
+
         # Copia arquivo
         dbutils.fs.cp(f"file:{local_path}", dbfs_path)
-        
+
         # Verifica se upload foi bem-sucedido
         file_info = dbutils.fs.ls(dbfs_path)
         if file_info:
             dbfs_size = file_info[0].size
             local_size = os.path.getsize(local_path)
-            
+
             if dbfs_size != local_size:
                 raise ValueError(f"Tamanhos diferentes: local={local_size}, dbfs={dbfs_size}")
-            
+
             print(f"    ✅ Upload concluído: {dbfs_size / (1024*1024):.1f} MB")
             return True
         else:
             raise ValueError("Arquivo não encontrado no DBFS após upload")
-        
+
     except Exception as e:
         print(f"    ❌ Erro no upload: {e}")
+        if "Public DBFS root is disabled" in str(e):
+            print(f"    💡 Mantendo arquivo local: {local_path}")
+            return True  # Considera sucesso para continuar processamento
         return False
 
 print("✅ Funções de download definidas!")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 💡 Troubleshooting DBFS
+# MAGIC
+# MAGIC **Se você receber erro "Public DBFS root is disabled":**
+# MAGIC
+# MAGIC 1. **Problema**: Databricks Community Edition desabilitou `/FileStore/`
+# MAGIC 2. **Solução**: Usamos `/tmp/` que é permitido
+# MAGIC 3. **Alternativa**: Use apenas armazenamento local se DBFS falhar completamente
 
 # COMMAND ----------
 
@@ -197,12 +216,23 @@ try:
 except:
     print(f"📁 Diretório DBFS será criado: {DBFS_RAW_DIR}")
 
-# Cria diretório DBFS
+# Cria diretório DBFS (usando /tmp que é permitido)
 try:
     dbutils.fs.mkdirs(DBFS_RAW_DIR)
     print(f"✅ Diretório DBFS criado: {DBFS_RAW_DIR}")
 except Exception as e:
     print(f"⚠️  Erro ao criar diretório DBFS: {e}")
+    print(f"💡 Tentando diretório alternativo...")
+
+    # Fallback para diretório do usuário
+    alternative_dir = f"/tmp/nyc_taxi_raw_{spark.sparkContext.sparkUser()}"
+    try:
+        dbutils.fs.mkdirs(alternative_dir)
+        DBFS_RAW_DIR = alternative_dir
+        print(f"✅ Diretório alternativo criado: {DBFS_RAW_DIR}")
+    except Exception as e2:
+        print(f"❌ Falha total: {e2}")
+        print(f"💡 Use dados locais apenas ou configure workspace com DBFS habilitado")
 
 # COMMAND ----------
 
@@ -228,23 +258,40 @@ for taxi_type, months in DATA_SOURCES.items():
         
         # Download
         if download_file_python(url, local_path):
-            # Upload para DBFS
-            if upload_to_dbfs(local_path, dbfs_path):
+            # Upload para DBFS (ou mantém local se DBFS falhar)
+            upload_success = upload_to_dbfs(local_path, dbfs_path)
+
+            if upload_success:
+                # Verifica se arquivo realmente existe no DBFS
+                try:
+                    dbutils.fs.ls(dbfs_path)
+                    actual_dbfs_path = dbfs_path
+                    can_remove_local = True
+                except:
+                    # DBFS falhou, usa arquivo local
+                    actual_dbfs_path = f"file:{local_path}"
+                    can_remove_local = False
+                    print(f"    💡 Usando arquivo local: {local_path}")
+
                 downloaded_files.append({
                     'taxi_type': taxi_type,
                     'year_month': year_month,
                     'filename': filename,
                     'local_path': local_path,
-                    'dbfs_path': dbfs_path,
-                    'url': url
+                    'dbfs_path': actual_dbfs_path,
+                    'url': url,
+                    'is_local_only': not can_remove_local
                 })
-                
-                # Remove arquivo local para economizar espaço
-                try:
-                    os.remove(local_path)
-                    print(f"    🗑️  Arquivo local removido")
-                except:
-                    pass
+
+                # Remove arquivo local apenas se upload DBFS foi bem-sucedido
+                if can_remove_local:
+                    try:
+                        os.remove(local_path)
+                        print(f"    🗑️  Arquivo local removido")
+                    except:
+                        pass
+                else:
+                    print(f"    📁 Arquivo mantido localmente")
             else:
                 failed_downloads.append({
                     'filename': filename,
@@ -356,13 +403,26 @@ if downloaded_files:
     
     # Mostra exemplo de como acessar no próximo notebook
     print(f"\n💡 Para usar no próximo notebook:")
-    print(f"```python")
-    print(f"# Listar arquivos extraídos")
-    print(f"dbutils.fs.ls('{DBFS_RAW_DIR}')")
-    print(f"")
-    print(f"# Ler um arquivo específico")
-    print(f"df = spark.read.parquet('{DBFS_RAW_DIR}/yellow_tripdata_2023-01.parquet')")
-    print(f"```")
+
+    # Verifica se há arquivos locais vs DBFS
+    local_files = [f for f in files_for_consolidation if f.get('is_local_only', False)]
+    dbfs_files = [f for f in files_for_consolidation if not f.get('is_local_only', False)]
+
+    if dbfs_files:
+        print(f"```python")
+        print(f"# Listar arquivos no DBFS")
+        print(f"dbutils.fs.ls('{DBFS_RAW_DIR}')")
+        print(f"")
+        print(f"# Ler arquivo do DBFS")
+        print(f"df = spark.read.parquet('{DBFS_RAW_DIR}/yellow_tripdata_2023-01.parquet')")
+        print(f"```")
+
+    if local_files:
+        print(f"\n⚠️  Alguns arquivos estão apenas localmente:")
+        print(f"```python")
+        print(f"# Ler arquivo local")
+        print(f"df = spark.read.parquet('file:/tmp/nyc_taxi_data/yellow_tripdata_2023-01.parquet')")
+        print(f"```")
     
 else:
     print("❌ Nenhum arquivo foi extraído com sucesso!")
@@ -388,8 +448,18 @@ print(f"\n🎉 EXTRAÇÃO CONCLUÍDA!")
 print("="*30)
 print(f"✅ Arquivos extraídos: {len(downloaded_files)}")
 print(f"❌ Arquivos com falha: {len(failed_downloads)}")
-print(f"📁 Dados disponíveis em: {DBFS_RAW_DIR}")
+
+# Mostra onde os dados estão
+local_only = sum(1 for f in downloaded_files if f.get('is_local_only', False))
+dbfs_files = len(downloaded_files) - local_only
+
+if dbfs_files > 0:
+    print(f"📁 Arquivos no DBFS: {dbfs_files} em {DBFS_RAW_DIR}")
+if local_only > 0:
+    print(f"📁 Arquivos locais: {local_only} em {LOCAL_DATA_DIR}")
+
 print(f"\n🚀 Próximo passo: Execute o notebook de Consolidação PySpark")
+print(f"💡 O próximo notebook detectará automaticamente a localização dos arquivos")
 
 # COMMAND ----------
 
